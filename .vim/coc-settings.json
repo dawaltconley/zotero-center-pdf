@@ -1,0 +1,6 @@
+{
+  "diagnostic.displayByAle": true,
+  "tsserver.enable": true,
+  "tsserver.useLocalTsdk": true,
+  "javascript.suggestionActions.enabled": false
+}
