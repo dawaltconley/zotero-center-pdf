@@ -17,7 +17,7 @@ async function startup({ id, version, rootURI }) {
     `${rootURI}/content/scripts/__addonRef__.js`,
   );
   plugin = new __addonInstance__.Plugin({ id, version, rootURI });
-  await plugin.startup();
+  plugin.startup();
 }
 
 function shutdown() {

@@ -1,8 +1,6 @@
-# Zotero Plugin Template
+# Zotero Plugin: Center PDF
 
-My personal template for making Zotero plugins. Simplified from
-[zotero-plugin-template](https://github.com/windingwind/zotero-plugin-template),
-dropping the `zotero-plugin-toolkit` dependency and
-only supporting Zotero 7. Uses
-[zotero-plugin-scaffold](https://github.com/northword/zotero-plugin-scaffold)
-for development and releases.
+Centers PDF pages in the Zotero view when using the navigation buttons.
+
+Very hacky solution, but currently useful for e-ink readers or other
+devices where scrolling is annoying.

@@ -1,4 +1,3 @@
-import pluginCss from './styles.scss';
 import { config } from '../package.json';
 
 export interface PluginOptions {
@@ -20,7 +19,7 @@ export class Plugin {
   }
 
   constructor({
-    id = 'plugin-name@dylan.ac',
+    id = 'center-pdf@dylan.ac',
     stylesId = 'pluginStyles',
     version,
     rootURI,
@@ -31,128 +30,122 @@ export class Plugin {
     this.rootURI = rootURI;
   }
 
-  async startup(): Promise<void> {
-    Zotero.getMainWindows().forEach((w) => this.addMenuItems(w));
-    this.registerObserver();
-    await this.styleExistingTabs();
+  startup(): void {
+    this.log('registering renderToolbar listener');
+    Zotero.Reader.registerEventListener(
+      'renderToolbar',
+      this.onRenderToolbar,
+      this.id,
+    );
   }
 
   shutdown(): void {
-    Zotero.getMainWindows().forEach((w) => this.removeMenuItems(w));
-    this.unregisterObserver();
+    this.log('unregistering renderToolbar listener');
+    Zotero.Reader.unregisterEventListener(
+      'renderToolbar',
+      this.onRenderToolbar,
+    );
   }
 
-  async attachStylesToReader(reader: _ZoteroTypes.ReaderInstance) {
+  onRenderToolbar = (e: _ZoteroTypes.Reader.EventParams<'renderToolbar'>) =>
+    this.addListeners(e.reader);
+
+  async addListeners(reader: _ZoteroTypes.ReaderInstance) {
+    this.log('adding page listeners');
     await reader._waitForReader();
     await reader._initPromise;
     const doc = reader?._iframeWindow?.document;
-    if (!doc || !doc.documentElement) {
+    const iframe = doc?.querySelector<HTMLIFrameElement>(
+      'iframe[src="pdf/web/viewer.html"]',
+    );
+    if (!doc || !iframe || !isIframe(iframe)) {
       this.log(`couldn't attach styles; tab ${reader.tabID} not ready`);
       return;
     }
-    if (doc.getElementById(this.stylesId)) {
-      this.log(`skipping ${reader.tabID}: styles already attached`);
+
+    const previous = doc.querySelector('button#previous');
+    const next = doc.querySelector('button#next');
+    const back = doc.querySelector('button#navigateBack');
+    const pageInput = doc.querySelector('input#pageNumber');
+
+    const viewer = await Plugin.getViewerContainer(iframe);
+    if (!viewer) {
       return;
     }
-    const styles = doc.createElement('style');
-    styles.id = this.stylesId;
-    styles.innerText = pluginCss;
-    doc.documentElement.appendChild(styles);
-    this.log('appended styles to tab: ' + reader.tabID);
+
+    const handler = () =>
+      setTimeout(() => {
+        this.centerCurrentPage(viewer);
+      }, 0);
+    previous?.addEventListener('click', handler);
+    next?.addEventListener('click', handler);
+    back?.addEventListener('click', handler);
+    pageInput?.addEventListener('change', handler);
+
+    this.log('added page listeners');
   }
 
-  async styleExistingTabs() {
-    this.log('adding styles to existing tabs');
-    const readers = Zotero.Reader._readers;
-    this.log(
-      `found ${readers.length} reader tags: ${readers.map((r) => r.tabID).join(', ')}`,
-    );
-    await Promise.all(readers.map((r) => this.attachStylesToReader(r)));
-    this.log('done adding styles to existing tabs');
-  }
-
-  #observerID?: string;
-  registerObserver() {
-    this.log('registering tab observer');
-    if (this.#observerID) {
-      throw new Error(`${this.id}: observer is already registered`);
+  centerCurrentPage(viewer: HTMLElement) {
+    const page = Plugin.getCurrentPage(viewer);
+    if (!page) {
+      this.log("couldn't identify current page");
+      return;
     }
-    this.#observerID = Zotero.Notifier.registerObserver(
-      {
-        notify: async (event, type, ids, extraData) => {
-          // @ts-expect-error zotero-types doesn't include 'load' in the event definition, but tabs have a load event
-          if ((event === 'add' || event === 'load') && type === 'tab') {
-            const tabIDs = ids.filter((id) => extraData[id].type === 'reader');
-            await Promise.all(
-              tabIDs.map(async (id) => {
-                const reader = Zotero.Reader.getByTabID(id.toString());
-                await this.attachStylesToReader(reader);
-              }),
+    const target = Plugin.getScrollTarget(viewer, page);
+    this.log(`scrolling to ${JSON.stringify(target)}`);
+    viewer.scrollTo(target);
+  }
+
+  static getViewerContainer(
+    iframe: HTMLIFrameElement,
+  ): Promise<HTMLElement | null> {
+    return new Promise((resolve) => {
+      const viewer =
+        iframe.contentDocument?.querySelector<HTMLElement>('#viewerContainer');
+      if (viewer) {
+        resolve(viewer);
+      } else {
+        iframe.addEventListener('load', () => {
+          const viewer =
+            iframe.contentDocument?.querySelector<HTMLElement>(
+              '#viewerContainer',
             );
-          }
-        },
-      },
-      ['tab'],
-    );
-    this.log('registered observer: ' + this.#observerID);
-  }
-
-  unregisterObserver() {
-    if (this.#observerID) {
-      this.log('unregistering observer: ' + this.#observerID);
-      Zotero.Notifier.unregisterObserver(this.#observerID);
-      this.#observerID = undefined;
-    }
-  }
-
-  addMenuItems(window: _ZoteroTypes.MainWindow): void {
-    const doc = window.document;
-    const menuId = `${config.addonRef}-menu-item`;
-    if (doc.getElementById(menuId)) {
-      this.log('toolbar menu already attached');
-      return;
-    }
-
-    window.MozXULElement.insertFTLIfNeeded(`${config.addonRef}-menu.ftl`);
-
-    const menuitem = doc.createXULElement('menuitem') as XULMenuItemElement;
-    menuitem.id = menuId;
-    menuitem.classList.add('menu-type-reader');
-    menuitem.setAttribute('type', 'checkbox');
-    menuitem.setAttribute('data-l10n-id', menuId);
-
-    menuitem.addEventListener('command', async (_e: CommandEvent) => {
-      const isChecked = menuitem.getAttribute('checked') === 'true';
-      this.#isActive = isChecked;
+          resolve(viewer || null);
+        });
+      }
     });
-
-    const viewMenu = doc.getElementById('menu_viewPopup');
-    const referenceNode =
-      viewMenu?.querySelector('menuseparator.menu-type-library') || null;
-    const inserted = viewMenu?.insertBefore(menuitem, referenceNode);
-
-    if (inserted) {
-      this.log(`successfully inserted menuitem: ${menuitem.id}`);
-      this.storeAddedElement(menuitem);
-    }
-  }
-
-  removeMenuItems(window: _ZoteroTypes.MainWindow): void {
-    const doc = window.document;
-    for (const id of this.#addedElementIDs) {
-      doc.getElementById(id)?.remove();
-    }
-  }
-
-  #addedElementIDs: string[] = [];
-  storeAddedElement(elem: Element) {
-    if (!elem.id) {
-      throw new Error('Element must have an id');
-    }
-    this.#addedElementIDs.push(elem.id);
   }
 
   log(msg: string) {
     Zotero.debug(`[${config.addonName}] ${msg}`);
   }
+
+  static getScrollTarget(viewer: HTMLElement, page: HTMLElement) {
+    const xOffset = (page.clientWidth - viewer.clientWidth) * 0.5;
+    const yOffset = (page.clientHeight - viewer.clientHeight) * 0.5;
+    return {
+      top: page.offsetTop + yOffset,
+      left: page.offsetLeft + xOffset,
+    };
+  }
+
+  // // unused, can uncomment if needed
+  // static getCurrentPageIndex(): number | null {
+  //   const viewState =
+  //     Zotero.Reader._readers[0]._internalReader._state.primaryViewState;
+  //   return 'pageIndex' in viewState ? viewState.pageIndex : null;
+  // }
+
+  static getCurrentPage(viewer: HTMLElement): HTMLElement | null {
+    const pages = viewer.querySelectorAll<HTMLElement>('.pdfViewer .page');
+    for (const p of pages) {
+      if (Math.abs(p.offsetTop - viewer.scrollTop) < 5) {
+        return p;
+      }
+    }
+    return null;
+  }
 }
+
+const isIframe = (e: Element): e is HTMLIFrameElement =>
+  e.tagName.toUpperCase() === 'IFRAME';

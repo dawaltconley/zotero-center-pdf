@@ -1,13 +1,13 @@
 {
-  "name": "zotero-plugin-template",
+  "name": "zotero-center-pdf",
   "version": "0.1.0",
-  "description": "Plugin description",
+  "description": "Zotero plugin to center a PDF in the view when navigating between pages.",
   "config": {
-    "addonName": "Plugin Name",
-    "addonID": "plugin-name@dylan.ac",
-    "addonRef": "plugin-name",
-    "addonInstance": "PluginName",
-    "prefsPrefix": "extensions.zotero.plugin-name"
+    "addonName": "Center PDF",
+    "addonID": "center-pdf@dylan.ac",
+    "addonRef": "center-pdf",
+    "addonInstance": "CenterPdf",
+    "prefsPrefix": "extensions.zotero.center-pdf"
   },
   "scripts": {
     "dev": "zotero-plugin serve",
@@ -31,16 +31,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dawaltconley/zotero-plugin-template.git"
+    "url": "git+https://github.com/dawaltconley/zotero-center-pdf.git"
   },
   "keywords": [
     "zotero",
     "plugin"
   ],
   "bugs": {
-    "url": "https://github.com/dawaltconley/zotero-plugin-template/issues"
+    "url": "https://github.com/dawaltconley/zotero-center-pdf/issues"
   },
-  "homepage": "https://github.com/dawaltconley/zotero-plugin-template#readme",
+  "homepage": "https://github.com/dawaltconley/zotero-center-pdf#readme",
   "prettier": {
     "printWidth": 80,
     "singleQuote": true,
