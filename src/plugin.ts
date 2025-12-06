@@ -1,3 +1,4 @@
+import type { PDFViewer } from 'pdfjs-dist';
 import { config } from '../package.json';
 
 export interface PluginOptions {
@@ -12,11 +13,6 @@ export class Plugin {
   readonly stylesId: string;
   readonly version: string;
   readonly rootURI: string;
-
-  #isActive: boolean = true;
-  get isActive(): boolean {
-    return this.#isActive;
-  }
 
   constructor({
     id = 'center-pdf@dylan.ac',
@@ -58,29 +54,58 @@ export class Plugin {
     const iframe = doc?.querySelector<HTMLIFrameElement>(
       'iframe[src="pdf/web/viewer.html"]',
     );
-    if (!doc || !iframe || !isIframe(iframe)) {
+
+    const pdfViewer: any =
+      // @ts-expect-error typescript doesn't have _iframe
+      reader._internalReader._lastView?._iframe.contentWindow
+        .PDFViewerApplication.pdfViewer;
+
+    if (!doc || !iframe || !isIframe(iframe) || !pdfViewer) {
       this.log(`couldn't attach styles; tab ${reader.tabID} not ready`);
       return;
     }
 
-    const previous = doc.querySelector('button#previous');
-    const next = doc.querySelector('button#next');
-    const back = doc.querySelector('button#navigateBack');
-    const pageInput = doc.querySelector('input#pageNumber');
+    // const previous = doc.querySelector('button#previous');
+    // const next = doc.querySelector('button#next');
+    // const back = doc.querySelector('button#navigateBack');
+    // const pageInput = doc.querySelector('input#pageNumber');
 
     const viewer = await Plugin.getViewerContainer(iframe);
     if (!viewer) {
       return;
     }
 
-    const handler = () =>
-      setTimeout(() => {
-        this.centerCurrentPage(viewer);
-      }, 0);
-    previous?.addEventListener('click', handler);
-    next?.addEventListener('click', handler);
-    back?.addEventListener('click', handler);
-    pageInput?.addEventListener('change', handler);
+    const internalReader = reader._internalReader;
+    internalReader.navigateToNextPage = () => {
+      this.log('next page');
+      internalReader._iframeWindow.PDFViewerApplication.pdfViewer.nextPage();
+      this.centerCurrentPage(viewer);
+    };
+
+    internalReader.navigateToPreviousPage = () => {
+      this.log('previous page');
+      internalReader._iframeWindow.PDFViewerApplication.pdfViewer.previousPage();
+      this.centerCurrentPage(viewer);
+    };
+
+    internalReader.navigateToFirstPage = () => {
+      this.log('first page');
+      internalReader._iframeWindow.PDFViewerApplication.eventBus.dispatch(
+        'firstpage',
+      );
+      this.centerCurrentPage(viewer);
+    };
+
+    // // alt: modify PDFjs method reader._internalReader._primaryView._iframe.contentWindow.PDFViewerApplication.pdfViewer.scrollPageIntoView
+    // // actually: reader._internalReader._lastView.navigateToNextPage() / navigateToPreviousPage()
+    // const handler = () =>
+    //   setTimeout(() => {
+    //     this.centerCurrentPage(viewer);
+    //   }, 0);
+    // previous?.addEventListener('click', handler);
+    // next?.addEventListener('click', handler);
+    // back?.addEventListener('click', handler);
+    // pageInput?.addEventListener('change', handler);
 
     this.log('added page listeners');
   }
@@ -136,6 +161,7 @@ export class Plugin {
   //   return 'pageIndex' in viewState ? viewState.pageIndex : null;
   // }
 
+  // reader._internalReader._lastView._iframe.contentWindow.PDFViewerApplication.pdfViewer.currentPageNumber
   static getCurrentPage(viewer: HTMLElement): HTMLElement | null {
     const pages = viewer.querySelectorAll<HTMLElement>('.pdfViewer .page');
     for (const p of pages) {
