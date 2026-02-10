@@ -47,10 +47,14 @@ export class Plugin {
     );
   }
 
-  onRenderToolbar = (e: _ZoteroTypes.Reader.EventParams<'renderToolbar'>) =>
-    this.addListeners(e.reader);
+  onRenderToolbar = (e: _ZoteroTypes.Reader.EventParams<'renderToolbar'>) => {
+    const { reader } = e;
+    if (isPDFReader(reader)) {
+      this.addListeners(reader);
+    }
+  };
 
-  async addListeners(reader: _ZoteroTypes.ReaderInstance) {
+  async addListeners(reader: _ZoteroTypes.ReaderInstance<'pdf'>) {
     this.log('adding page listeners');
     await reader._waitForReader();
     await reader._initPromise;
@@ -149,3 +153,7 @@ export class Plugin {
 
 const isIframe = (e: Element): e is HTMLIFrameElement =>
   e.tagName.toUpperCase() === 'IFRAME';
+
+const isPDFReader = (
+  r: _ZoteroTypes.ReaderInstance,
+): r is _ZoteroTypes.ReaderInstance<'pdf'> => r.type === 'pdf';
