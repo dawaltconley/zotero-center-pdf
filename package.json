@@ -1,6 +1,6 @@
 {
   "name": "zotero-center-pdf",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Zotero plugin to center a PDF in the view when navigating between pages.",
   "config": {
     "addonName": "Center PDF",
