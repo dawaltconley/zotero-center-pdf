@@ -32,27 +32,54 @@ export class Plugin {
 
   startup(): void {
     this.log('registering renderToolbar listener');
-    Zotero.Reader.registerEventListener(
-      'renderToolbar',
-      this.onRenderToolbar,
-      this.id,
-    );
+    this.registerObserver();
   }
 
   shutdown(): void {
     this.log('unregistering renderToolbar listener');
-    Zotero.Reader.unregisterEventListener(
-      'renderToolbar',
-      this.onRenderToolbar,
-    );
+    this.unregisterObserver();
   }
 
-  onRenderToolbar = (e: _ZoteroTypes.Reader.EventParams<'renderToolbar'>) => {
-    const { reader } = e;
-    if (isPDFReader(reader)) {
-      this.addListeners(reader);
+  observerID?: string;
+  #updatedTabs = new Set<string | number>();
+  registerObserver() {
+    this.log('registering tab observer');
+    if (this.observerID) {
+      throw new Error(`${this.id}: observer is already registered`);
     }
-  };
+    type Trigger = _ZoteroTypes.Notifier.Event | 'load'; // zotero-types doesn't include 'load' in the event definition, but tabs have a load event
+    const triggers = new Set<Trigger>(['add', 'load', 'select']);
+    this.observerID = Zotero.Notifier.registerObserver(
+      {
+        notify: async (event, type, ids, extraData) => {
+          if (triggers.has(event) && type === 'tab') {
+            const tabIDs = ids.filter(
+              (id) =>
+                extraData[id].type === 'reader' && !this.#updatedTabs.has(id),
+            );
+            await Promise.all(
+              tabIDs.map(async (id) => {
+                const reader = Zotero.Reader.getByTabID(id.toString());
+                if (isPDFReader(reader)) {
+                  await this.addListeners(reader);
+                }
+              }),
+            );
+          }
+        },
+      },
+      ['tab'],
+    );
+    this.log('registered observer: ' + this.observerID);
+  }
+
+  unregisterObserver() {
+    if (this.observerID) {
+      this.log('unregistering observer: ' + this.observerID);
+      Zotero.Notifier.unregisterObserver(this.observerID);
+      this.observerID = undefined;
+    }
+  }
 
   async addListeners(reader: _ZoteroTypes.ReaderInstance<'pdf'>) {
     this.log('adding page listeners');
