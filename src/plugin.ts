@@ -67,24 +67,38 @@ export class Plugin {
       return;
     }
 
-    const previous = doc.querySelector('button#previous');
-    const next = doc.querySelector('button#next');
-    const back = doc.querySelector('button#navigateBack');
-    const pageInput = doc.querySelector('input#pageNumber');
-
     const viewer = await Plugin.getViewerContainer(iframe);
-    if (!viewer) {
+    const lastView = reader._internalReader._lastView;
+    const pdfViewer = lastView._iframeWindow?.PDFViewerApplication.pdfViewer;
+    const eventBus = lastView._iframeWindow?.PDFViewerApplication.eventBus;
+    if (!viewer || !pdfViewer || !eventBus) {
       return;
     }
 
-    const handler = () =>
-      setTimeout(() => {
-        this.centerCurrentPage(viewer);
-      }, 0);
-    previous?.addEventListener('click', handler);
-    next?.addEventListener('click', handler);
-    back?.addEventListener('click', handler);
-    pageInput?.addEventListener('change', handler);
+    // Modifying functions defined at reader/src/pdf/pdf-view.js
+    lastView.navigateBack = () => {
+      // @ts-expect-error _history not included in types
+      lastView._history.navigateBack();
+      this.centerCurrentPage(viewer);
+    };
+    lastView.navigateToPreviousPage = () => {
+      pdfViewer.previousPage();
+      this.centerCurrentPage(viewer);
+    };
+    lastView.navigateToNextPage = () => {
+      pdfViewer.nextPage();
+      this.centerCurrentPage(viewer);
+    };
+    lastView.navigateToFirstPage = () => {
+      // @ts-expect-error not sure why it thinks dispatch needs two arguments
+      eventBus.dispatch('firstpage');
+      this.centerCurrentPage(viewer);
+    };
+    lastView.navigateToLastPage = () => {
+      // @ts-expect-error not sure why it thinks dispatch needs two arguments
+      eventBus.dispatch('lastpage');
+      this.centerCurrentPage(viewer);
+    };
 
     this.log('added page listeners');
   }
