@@ -5,7 +5,13 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['build/**', '.scaffold/**', 'node_modules/**', 'scripts/'],
+    ignores: [
+      'build/**',
+      '.scaffold/**',
+      'node_modules/**',
+      'scripts/',
+      'typings/i10n.d.ts',
+    ],
   },
   {
     extends: [eslint.configs.recommended, ...tseslint.configs.recommended],
