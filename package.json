@@ -21,12 +21,12 @@
   "license": "ISC",
   "devDependencies": {
     "@eslint/js": "^8.57.1",
-    "@types/node": "^22.19.11",
-    "prettier": "^3.8.1",
+    "@types/node": "^22.19.17",
+    "prettier": "^3.8.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^7.18.0",
-    "zotero-plugin-scaffold": "^0.8.3",
-    "zotero-types": "^4.1.0-beta.4"
+    "zotero-plugin-scaffold": "^0.8.6",
+    "zotero-types": "^4.1.2"
   },
   "repository": {
     "type": "git",
