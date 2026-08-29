@@ -60,7 +60,7 @@ export class Plugin {
             await Promise.all(
               tabIDs.map(async (id) => {
                 const reader = Zotero.Reader.getByTabID(id.toString());
-                if (isPDFReader(reader)) {
+                if (reader && isPDFReader(reader)) {
                   await this.addListeners(reader);
                 }
               }),
