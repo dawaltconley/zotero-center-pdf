@@ -1,4 +1,10 @@
 import { config } from '../package.json';
+import {
+  isPDFReader,
+  isIFrame,
+  waitForReader,
+  waitForInternalReader,
+} from './utils';
 
 export interface PluginOptions {
   id: string;
@@ -83,13 +89,13 @@ export class Plugin {
 
   async addListeners(reader: _ZoteroTypes.ReaderInstance<'pdf'>) {
     this.log('adding page listeners');
-    await reader._waitForReader();
-    await reader._initPromise;
+    await waitForReader(reader);
+    await waitForInternalReader(reader);
     const doc = reader?._iframeWindow?.document;
     const iframe = doc?.querySelector<HTMLIFrameElement>(
       'iframe[src="pdf/web/viewer.html"]',
     );
-    if (!doc || !iframe || !isIframe(iframe)) {
+    if (!doc || !iframe || !isIFrame(iframe)) {
       this.log(`couldn't attach styles; tab ${reader.tabID} not ready`);
       return;
     }
@@ -191,10 +197,3 @@ export class Plugin {
     return null;
   }
 }
-
-const isIframe = (e: Element): e is HTMLIFrameElement =>
-  e.tagName.toUpperCase() === 'IFRAME';
-
-const isPDFReader = (
-  r: _ZoteroTypes.ReaderInstance,
-): r is _ZoteroTypes.ReaderInstance<'pdf'> => r.type === 'pdf';
