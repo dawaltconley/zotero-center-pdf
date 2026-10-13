@@ -366,19 +366,8 @@ export class Plugin {
    */
   static getPageScrollAmount(viewer: HTMLElement): number {
     const height = viewer.clientHeight;
-    const overlap = Math.min(height / 10, Plugin.getLineHeight(viewer) * 2);
+    const overlap = Math.min(height / 10, TWO_LINES);
     return height - overlap;
-  }
-
-  static getLineHeight(elem: HTMLElement): number {
-    const style = elem.ownerDocument?.defaultView?.getComputedStyle(elem);
-    const lineHeight = parseFloat(style?.lineHeight || '');
-    if (!Number.isNaN(lineHeight)) {
-      return lineHeight;
-    }
-    // 'normal' computes to roughly 1.2x the font size
-    const fontSize = parseFloat(style?.fontSize || '');
-    return Number.isNaN(fontSize) ? 0 : fontSize * 1.2;
   }
 
   static getScrollTarget(viewer: HTMLElement, page: HTMLElement) {
@@ -407,6 +396,15 @@ export class Plugin {
     return null;
   }
 }
+
+/**
+ * Two lines of text, in px. #viewerContainer only ever holds canvas-rendered
+ * pages, so its own line-height comes from the viewer's stylesheet and doesn't
+ * move with the PDF or the zoom level — measuring it per scroll would return
+ * this same number while forcing a style flush. 'normal' computes to about
+ * 1.2x the font size, so two lines of the viewer's ~16px default lands near 40.
+ */
+const TWO_LINES = 40;
 
 const PREFS = {
   pagingMode: `${config.prefsPrefix}.paging-mode`,
