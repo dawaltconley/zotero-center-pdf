@@ -3,4 +3,6 @@
 /* eslint-disable */
 // @ts-nocheck
 export type FluentMessageId =
-;
+  | 'radio-menu'
+  | 'radio-menu-centered'
+  | 'radio-menu-regular';

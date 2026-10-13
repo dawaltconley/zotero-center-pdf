@@ -1,10 +1,30 @@
 import { config } from '../package.json';
 import {
+  PagingMode,
+  isPagingMode,
   isPDFReader,
   isIFrame,
   waitForReader,
   waitForInternalReader,
 } from './utils';
+
+type PDFView =
+  _ZoteroTypes.ReaderInstance<'pdf'>['_internalReader']['_lastView'];
+
+/** The navigation functions defined at reader/src/pdf/pdf-view.js */
+interface Navigation {
+  navigateBack: () => void;
+  navigateToPreviousPage: () => void;
+  navigateToNextPage: () => void;
+  navigateToFirstPage: () => void;
+  navigateToLastPage: () => void;
+}
+
+/** What a patched view needs in order to be re-patched on a mode change. */
+interface PatchedView {
+  viewer: HTMLElement;
+  defaults: Navigation;
+}
 
 export interface PluginOptions {
   id: string;
@@ -19,9 +39,16 @@ export class Plugin {
   readonly version: string;
   readonly rootURI: string;
 
-  #isActive: boolean = true;
-  get isActive(): boolean {
-    return this.#isActive;
+  #mode: PagingMode = this.loadMode() || 'centered';
+  get mode(): PagingMode {
+    return this.#mode;
+  }
+  set mode(mode: PagingMode) {
+    if (mode !== this.#mode) {
+      this.saveMode(mode);
+      this.#mode = mode;
+      this.patchOpenReaders();
+    }
   }
 
   constructor({
@@ -39,11 +66,29 @@ export class Plugin {
   startup(): void {
     this.log('registering renderToolbar listener');
     this.registerObserver();
+    this.addToAllWindows();
   }
 
   shutdown(): void {
     this.log('unregistering renderToolbar listener');
     this.unregisterObserver();
+    this.removeFromAllWindows();
+  }
+
+  addToWindow(window: _ZoteroTypes.MainWindow): void {
+    this.addMenuItems(window);
+  }
+
+  addToAllWindows(): void {
+    Zotero.getMainWindows().forEach((w) => this.addToWindow(w));
+  }
+
+  removeFromWindow(window: _ZoteroTypes.MainWindow): void {
+    this.removeMenuItems(window);
+  }
+
+  removeFromAllWindows(): void {
+    Zotero.getMainWindows().forEach((w) => this.removeFromWindow(w));
   }
 
   observerID?: string;
@@ -87,6 +132,8 @@ export class Plugin {
     }
   }
 
+  #patchedViews = new WeakMap<PDFView, PatchedView>();
+
   async addListeners(reader: _ZoteroTypes.ReaderInstance<'pdf'>) {
     this.log('adding page listeners');
     await waitForReader(reader);
@@ -102,38 +149,159 @@ export class Plugin {
 
     const viewer = await Plugin.getViewerContainer(iframe);
     const lastView = reader._internalReader._lastView;
-    const pdfViewer = lastView._iframeWindow?.PDFViewerApplication.pdfViewer;
-    const eventBus = lastView._iframeWindow?.PDFViewerApplication.eventBus;
-    if (!viewer || !pdfViewer || !eventBus) {
+    const app = lastView._iframeWindow?.PDFViewerApplication;
+    if (!viewer || !app?.pdfViewer || !app?.eventBus) {
       return;
     }
 
-    // Modifying functions defined at reader/src/pdf/pdf-view.js
-    lastView.navigateBack = () => {
-      // @ts-expect-error _history not included in types
-      lastView._history.navigateBack();
-      this.centerCurrentPage(viewer);
-    };
-    lastView.navigateToPreviousPage = () => {
-      pdfViewer.previousPage();
-      this.centerCurrentPage(viewer);
-    };
-    lastView.navigateToNextPage = () => {
-      pdfViewer.nextPage();
-      this.centerCurrentPage(viewer);
-    };
-    lastView.navigateToFirstPage = () => {
-      // @ts-expect-error not sure why it thinks dispatch needs two arguments
-      eventBus.dispatch('firstpage');
-      this.centerCurrentPage(viewer);
-    };
-    lastView.navigateToLastPage = () => {
-      // @ts-expect-error not sure why it thinks dispatch needs two arguments
-      eventBus.dispatch('lastpage');
-      this.centerCurrentPage(viewer);
-    };
-
+    this.patchNavigation(lastView, viewer);
     this.log('added page listeners');
+  }
+
+  /**
+   * Replaces a view's navigation functions with implementations of the current
+   * paging mode. Safe to call repeatedly: the view's default implementations
+   * are saved on the first patch, so later patches replace rather than nest.
+   */
+  patchNavigation(view: PDFView, viewer: HTMLElement): void {
+    let patched = this.#patchedViews.get(view);
+    if (!patched) {
+      patched = {
+        viewer,
+        defaults: {
+          navigateBack: view.navigateBack.bind(view),
+          navigateToPreviousPage: view.navigateToPreviousPage.bind(view),
+          navigateToNextPage: view.navigateToNextPage.bind(view),
+          navigateToFirstPage: view.navigateToFirstPage.bind(view),
+          navigateToLastPage: view.navigateToLastPage.bind(view),
+        },
+      };
+      this.#patchedViews.set(view, patched);
+    }
+    // the stored container wins; the argument only seeds the first patch
+    const { defaults, viewer: container } = patched;
+
+    switch (this.mode) {
+      case 'regular':
+        view.navigateBack = defaults.navigateBack;
+        view.navigateToPreviousPage = defaults.navigateToPreviousPage;
+        view.navigateToNextPage = defaults.navigateToNextPage;
+        view.navigateToFirstPage = defaults.navigateToFirstPage;
+        view.navigateToLastPage = defaults.navigateToLastPage;
+        break;
+
+      case 'centered':
+        view.navigateBack = () => {
+          defaults.navigateBack();
+          this.centerCurrentPage(container);
+        };
+        view.navigateToPreviousPage = () => {
+          defaults.navigateToPreviousPage();
+          this.centerCurrentPage(container);
+        };
+        view.navigateToNextPage = () => {
+          defaults.navigateToNextPage();
+          this.centerCurrentPage(container);
+        };
+        view.navigateToFirstPage = () => {
+          defaults.navigateToFirstPage();
+          this.centerCurrentPage(container);
+        };
+        view.navigateToLastPage = () => {
+          defaults.navigateToLastPage();
+          this.centerCurrentPage(container);
+        };
+        break;
+    }
+
+    this.log(`patched navigation for '${this.mode}' paging`);
+  }
+
+  /** Re-patches every open PDF reader, applying the current paging mode. */
+  patchOpenReaders(): void {
+    for (const reader of Zotero.Reader._readers) {
+      if (!isPDFReader(reader)) continue;
+      const view = reader._internalReader?._lastView;
+      const patched = view && this.#patchedViews.get(view);
+      if (patched) {
+        this.patchNavigation(view, patched.viewer);
+      }
+    }
+  }
+
+  addMenuItems(window: _ZoteroTypes.MainWindow): void {
+    const doc = window.document;
+    const menuId = `${config.addonRef}-radio-menu`;
+    if (doc.getElementById(menuId)) {
+      this.log('paging menu already attached');
+      return;
+    }
+
+    window.MozXULElement.insertFTLIfNeeded(`${config.addonRef}-menu.ftl`);
+
+    // submenu container
+    const menu = doc.createXULElement('menu') as XULMenuElement;
+    menu.id = menuId;
+    menu.classList.add('menu-type-reader');
+    menu.setAttribute('data-l10n-id', menuId);
+
+    // submenu popup, contains menu items
+    const popup = doc.createXULElement('menupopup') as XULMenuPopupElement;
+    menu.appendChild(popup);
+
+    // menu items: radio buttons
+    for (const value of PagingMode) {
+      const radio = doc.createXULElement('menuitem') as XULMenuItemElement;
+      radio.setAttribute('type', 'radio');
+      radio.setAttribute('name', `${config.addonRef}-menu-ui-radio`);
+
+      radio.id = `${menuId}-${value}`;
+      radio.value = value;
+      radio.addEventListener('command', () => {
+        this.mode = value;
+      });
+
+      radio.setAttribute('data-l10n-id', radio.id);
+      if (radio.value === this.mode) {
+        radio.setAttribute('checked', 'true');
+      }
+
+      popup.appendChild(radio);
+    }
+
+    const viewMenu = doc.getElementById('menu_viewPopup');
+    const referenceNode =
+      viewMenu?.querySelector('menuseparator.menu-type-library') || null;
+    const inserted = viewMenu?.insertBefore(menu, referenceNode);
+
+    if (inserted) {
+      this.log(`successfully inserted menu: ${menu.id}`);
+      this.storeAddedElement(menu);
+    }
+  }
+
+  removeMenuItems(window: _ZoteroTypes.MainWindow): void {
+    const doc = window.document;
+    for (const id of this.#addedElementIDs) {
+      doc.getElementById(id)?.remove();
+    }
+  }
+
+  #addedElementIDs: string[] = [];
+  storeAddedElement(elem: Element) {
+    if (!elem.id) {
+      throw new Error('Element must have an id');
+    }
+    this.#addedElementIDs.push(elem.id);
+  }
+
+  loadMode(): PagingMode | null {
+    const saved = Zotero.Prefs.get(PREFS.pagingMode, true);
+    return isPagingMode(saved) ? saved : null;
+  }
+
+  saveMode(mode: PagingMode) {
+    Zotero.Prefs.set(PREFS.pagingMode, mode, true);
   }
 
   centerCurrentPage(viewer: HTMLElement) {
@@ -197,3 +365,7 @@ export class Plugin {
     return null;
   }
 }
+
+const PREFS = {
+  pagingMode: `${config.prefsPrefix}.paging-mode`,
+} satisfies Record<string, string>;

@@ -1,3 +1,10 @@
+export const PagingMode = ['regular', 'centered'] as const;
+
+export type PagingMode = (typeof PagingMode)[number];
+
+export const isPagingMode = (value: any): value is PagingMode =>
+  PagingMode.some((m) => m === value?.toString());
+
 export const isPDFReader = (
   r: _ZoteroTypes.ReaderInstance,
 ): r is _ZoteroTypes.ReaderInstance<'pdf'> => r.type === 'pdf';
