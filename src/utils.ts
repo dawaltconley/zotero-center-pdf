@@ -1,4 +1,4 @@
-export const PagingMode = ['regular', 'centered'] as const;
+export const PagingMode = ['regular', 'centered', 'continuous'] as const;
 
 export type PagingMode = (typeof PagingMode)[number];
 

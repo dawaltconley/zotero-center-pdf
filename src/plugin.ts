@@ -212,6 +212,16 @@ export class Plugin {
           this.centerCurrentPage(container);
         };
         break;
+
+      case 'continuous':
+        // only next/previous become scrolls; jumping to a specific page still
+        // means jumping to that page
+        view.navigateBack = defaults.navigateBack;
+        view.navigateToPreviousPage = () => Plugin.scrollByPages(container, -1);
+        view.navigateToNextPage = () => Plugin.scrollByPages(container, 1);
+        view.navigateToFirstPage = defaults.navigateToFirstPage;
+        view.navigateToLastPage = defaults.navigateToLastPage;
+        break;
     }
 
     this.log(`patched navigation for '${this.mode}' paging`);
@@ -337,6 +347,38 @@ export class Plugin {
 
   log(msg: string) {
     Zotero.debug(`[${config.addonName}] ${msg}`);
+  }
+
+  /**
+   * Scrolls the viewer by `pages` pages. Equivalent to
+   * window.scrollByPages(), which can't be used here: #viewerContainer is the
+   * PDF viewer's scrolling element, so its window never scrolls.
+   */
+  static scrollByPages(viewer: HTMLElement, pages: number): void {
+    viewer.scrollBy({ top: pages * Plugin.getPageScrollAmount(viewer) });
+  }
+
+  /**
+   * How far one page scroll travels: the viewport height, less the smaller of
+   * 10% of the viewport or two lines of text. Leaving that overlap keeps a
+   * little context between scrolls. Mirrors Gecko's page scroll amount, which
+   * window.scrollByPages() would otherwise have given us for free.
+   */
+  static getPageScrollAmount(viewer: HTMLElement): number {
+    const height = viewer.clientHeight;
+    const overlap = Math.min(height / 10, Plugin.getLineHeight(viewer) * 2);
+    return height - overlap;
+  }
+
+  static getLineHeight(elem: HTMLElement): number {
+    const style = elem.ownerDocument?.defaultView?.getComputedStyle(elem);
+    const lineHeight = parseFloat(style?.lineHeight || '');
+    if (!Number.isNaN(lineHeight)) {
+      return lineHeight;
+    }
+    // 'normal' computes to roughly 1.2x the font size
+    const fontSize = parseFloat(style?.fontSize || '');
+    return Number.isNaN(fontSize) ? 0 : fontSize * 1.2;
   }
 
   static getScrollTarget(viewer: HTMLElement, page: HTMLElement) {

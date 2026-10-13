@@ -6,3 +6,6 @@ radio-menu-regular =
 
 radio-menu-centered =
     .label = Centered
+
+radio-menu-continuous =
+    .label = Continuous

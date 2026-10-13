@@ -5,4 +5,5 @@
 export type FluentMessageId =
   | 'radio-menu'
   | 'radio-menu-centered'
+  | 'radio-menu-continuous'
   | 'radio-menu-regular';
