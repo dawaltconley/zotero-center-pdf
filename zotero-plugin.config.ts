@@ -1,4 +1,5 @@
 import { defineConfig } from 'zotero-plugin-scaffold';
+import { sassPlugin } from 'esbuild-sass-plugin';
 import pkg from './package.json';
 
 export default defineConfig({
@@ -36,6 +37,11 @@ export default defineConfig({
         globalName: pkg.config.addonInstance,
         target: 'firefox115',
         outfile: `.scaffold/build/addon/content/scripts/${pkg.config.addonRef}.js`,
+        plugins: [
+          sassPlugin({
+            type: 'css-text',
+          }),
+        ],
       },
     ],
   },

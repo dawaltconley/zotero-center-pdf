@@ -1,0 +1,32 @@
+// Styles for the reader UI document (toolbar, popups).
+
+.center-pdf-popup {
+  .split-toggle button {
+    font-size: 12px;
+    color: var(--fill-primary);
+  }
+
+  .option .value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .option input[type='number'] {
+    width: 60px;
+  }
+
+  .area-label {
+    color: var(--fill-secondary);
+  }
+
+  .footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+// Scroll and spread mode options conflict with paging
+.center-pdf-active .center-pdf-conflict {
+  display: none !important;
+}

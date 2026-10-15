@@ -12,6 +12,9 @@ import {
   type Transform,
 } from './geometry';
 import type { Settings } from './settings';
+import pdfViewCss from './styles/pdf-view.scss';
+
+const STYLE_ID = 'center-pdf-styles';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** Zotero's internal PDFView (reader/src/pdf/pdf-view.js). */
@@ -47,6 +50,17 @@ export class Navigator {
     this.#getSettings = getSettings;
     this.#log = log;
     this.#patch();
+    this.#addStyles();
+  }
+
+  #addStyles() {
+    const doc = this.document;
+    if (doc.getElementById(STYLE_ID)) return;
+    const style = doc.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = pdfViewCss;
+    doc.head!.append(style);
+    this.#restore.push(() => style.remove());
   }
 
   // The reader hands us its objects with Xray wrappers waived, so anything

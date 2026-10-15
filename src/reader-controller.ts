@@ -1,3 +1,4 @@
+import readerCss from './styles/reader.scss';
 import { Navigator, type PDFView } from './navigator';
 import {
   loadDocSettings,
@@ -7,13 +8,7 @@ import {
   type Settings,
 } from './settings';
 import { drawArea, showAreaPreview } from './ui/draw-canvas';
-import {
-  BUTTON_ID,
-  POPUP_CLASS,
-  Popup,
-  STYLES,
-  createToolbarButton,
-} from './ui/popup';
+import { BUTTON_ID, POPUP_CLASS, Popup, createToolbarButton } from './ui/popup';
 
 const STYLE_ID = 'center-pdf-styles';
 const CONFLICT_CLASS = 'center-pdf-conflict';
@@ -58,7 +53,7 @@ export class ReaderController {
 
     const style = doc.createElement('style');
     style.id = STYLE_ID;
-    style.textContent = STYLES;
+    style.textContent = readerCss;
     doc.head!.append(style);
 
     this.#injectButton();

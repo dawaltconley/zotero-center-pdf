@@ -1,0 +1,48 @@
+// Styles for the pdf.js iframe document (drawing canvas, area preview).
+@use 'variables' as *;
+
+.center-pdf-draw {
+  // read by the canvas drawing code
+  --center-pdf-accent: #{$accent};
+  --center-pdf-dim: #{$dim};
+
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  cursor: crosshair;
+  touch-action: none;
+
+  canvas {
+    position: absolute;
+  }
+
+  .hint {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    font:
+      13px system-ui,
+      sans-serif;
+    pointer-events: none;
+  }
+}
+
+.center-pdf-preview {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px dashed $accent;
+  pointer-events: none;
+  z-index: 10;
+
+  .divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: 1px dashed $accent;
+  }
+}

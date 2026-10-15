@@ -41,36 +41,18 @@ export function drawArea(
   };
 
   const backdrop = doc.createElement('div');
+  backdrop.className = 'center-pdf-draw';
   backdrop.tabIndex = -1;
-  Object.assign(backdrop.style, {
-    position: 'fixed',
-    inset: '0',
-    zIndex: '100000',
-    cursor: 'crosshair',
-    touchAction: 'none',
-  });
 
   const hint = doc.createElement('div');
+  hint.className = 'hint';
   hint.textContent = 'Drag to select the content area · Esc to cancel';
-  Object.assign(hint.style, {
-    position: 'absolute',
-    top: '8px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    padding: '4px 10px',
-    borderRadius: '6px',
-    background: 'rgba(0, 0, 0, 0.75)',
-    color: 'white',
-    font: '13px system-ui, sans-serif',
-    pointerEvents: 'none',
-  });
 
   const canvas = doc.createElement('canvas');
   const dpr = win.devicePixelRatio || 1;
   canvas.width = Math.round(box.width * dpr);
   canvas.height = Math.round(box.height * dpr);
   Object.assign(canvas.style, {
-    position: 'absolute',
     left: `${box.left}px`,
     top: `${box.top}px`,
     width: `${box.width}px`,
@@ -83,6 +65,11 @@ export function drawArea(
   doc.body!.append(backdrop);
   backdrop.focus();
 
+  // colors are defined in pdf-view.scss
+  const css = win.getComputedStyle(backdrop)!;
+  const accent = css.getPropertyValue('--center-pdf-accent').trim();
+  const dim = css.getPropertyValue('--center-pdf-dim').trim();
+
   let start: { x: number; y: number } | null = null;
   let rect: { x0: number; y0: number; x1: number; y1: number } | null = null;
 
@@ -93,7 +80,7 @@ export function drawArea(
 
   const draw = () => {
     ctx.clearRect(0, 0, box.width, box.height);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.fillStyle = dim;
     if (!rect) {
       ctx.fillRect(0, 0, box.width, box.height);
       return;
@@ -106,7 +93,7 @@ export function drawArea(
     ctx.fillRect(0, y1, box.width, box.height - y1);
     ctx.fillRect(0, y0, x0, h);
     ctx.fillRect(x1, y0, box.width - x1, h);
-    ctx.strokeStyle = '#2ea8e5';
+    ctx.strokeStyle = accent;
     ctx.lineWidth = 2;
     ctx.setLineDash([]);
     ctx.strokeRect(x0, y0, w, h);
@@ -232,26 +219,17 @@ export function showAreaPreview(nav: Navigator, columns: number): () => void {
   const pageH = pageDiv.clientHeight / scale;
   const pct = (v: number, total: number) => `${(100 * v) / total}%`;
   const outline = doc.createElement('div');
+  outline.className = 'center-pdf-preview';
   Object.assign(outline.style, {
-    position: 'absolute',
     left: pct(area.left, pageW),
     top: pct(area.top, pageH),
     width: pct(area.width, pageW),
     height: pct(area.height, pageH),
-    border: '2px dashed #2ea8e5',
-    boxSizing: 'border-box',
-    pointerEvents: 'none',
-    zIndex: '10',
   });
   for (let i = 1; i < columns; i++) {
     const divider = doc.createElement('div');
-    Object.assign(divider.style, {
-      position: 'absolute',
-      top: '0',
-      bottom: '0',
-      left: `${(100 * i) / columns}%`,
-      borderLeft: '1px dashed #2ea8e5',
-    });
+    divider.className = 'divider';
+    divider.style.left = `${(100 * i) / columns}%`;
     outline.append(divider);
   }
   pageDiv.append(outline);

@@ -17,16 +17,6 @@ const MODES: [Mode, string][] = [
   ['continuous', 'Continuous'],
 ];
 
-/** Styles for our popup and the toolbar button, injected into the reader UI. */
-export const STYLES = `
-.${POPUP_CLASS} .split-toggle button { font-size: 12px; color: var(--fill-primary); }
-.${POPUP_CLASS} .option .value { display: flex; align-items: center; gap: 6px; }
-.${POPUP_CLASS} .option input[type=number] { width: 60px; }
-.${POPUP_CLASS} .area-label { color: var(--fill-secondary); }
-.${POPUP_CLASS} .footer { display: flex; justify-content: flex-end; }
-.center-pdf-active .center-pdf-conflict { display: none !important; }
-`;
-
 function h<K extends keyof HTMLElementTagNameMap>(
   doc: Document,
   tag: K,

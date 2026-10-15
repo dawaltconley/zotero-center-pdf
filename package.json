@@ -23,6 +23,7 @@
   "devDependencies": {
     "@eslint/js": "^8.57.1",
     "@types/node": "^22.20.1",
+    "esbuild-sass-plugin": "^3.7.0",
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^7.18.0",
