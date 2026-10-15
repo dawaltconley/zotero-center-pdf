@@ -4,6 +4,7 @@
   .split-toggle button {
     font-size: 12px;
     color: var(--fill-primary);
+    padding: 0px 2px;
   }
 
   .option .value {
@@ -18,6 +19,11 @@
 
   .area-label {
     color: var(--fill-secondary);
+  }
+
+  .toolbar-button {
+    width: auto;
+    padding: 0px 5px;
   }
 
   .footer {
