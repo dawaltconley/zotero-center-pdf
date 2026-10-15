@@ -296,13 +296,66 @@ export class Navigator {
   }
 
   hasStep(dir: Dir): boolean {
+    if (this.#scrollsAcrossPages) return this.#scrollTarget(dir) !== null;
     return this.#findTarget(dir) !== null;
   }
 
   go(dir: Dir) {
     this.#ensureLayout();
+    if (this.#scrollsAcrossPages) {
+      this.#scroll(dir);
+      return;
+    }
     const target = this.#findTarget(dir);
     if (target) this.#apply(target);
+  }
+
+  /**
+   * With a single column there's no reason to stop at page boundaries, so
+   * continuous mode scrolls straight through them by a fixed step.
+   */
+  get #scrollsAcrossPages(): boolean {
+    const { mode, columns } = this.#getSettings();
+    return mode === 'continuous' && columns === 1;
+  }
+
+  /**
+   * The scroll position one step away, clamped between the top of the first
+   * page's area and the bottom of the last page's. `undefined` means the zoom
+   * doesn't match the content area yet; `null` means there's nowhere to go.
+   */
+  #scrollTarget(dir: Dir): number | null | undefined {
+    const pageIndex = this.pdfViewer.currentPageNumber - 1;
+    const stop = this.stops(pageIndex)[0];
+    if (!stop || Math.abs(this.pdfViewer.currentScale - stop.scale) > 1e-3) {
+      return undefined;
+    }
+    const lastPage = this.pdfViewer.pagesCount - 1;
+    const min = this.pageOrigin(0).top + this.stops(0)[0].top;
+    const max =
+      this.pageOrigin(lastPage).top + this.stops(lastPage).at(-1)!.top;
+    const overlap = Math.min(Math.max(this.#getSettings().overlapPct, 0), 90);
+    const step = this.viewSize().height * (1 - overlap / 100);
+    const current = this.container.scrollTop;
+    const target =
+      dir === 1 ? Math.min(max, current + step) : Math.max(min, current - step);
+    return (target - current) * dir > 1 ? target : null;
+  }
+
+  #scroll(dir: Dir) {
+    const target = this.#scrollTarget(dir);
+    if (target === undefined) {
+      // first press after changing settings or zooming: align to the area
+      this.snap();
+      return;
+    }
+    if (target === null) return;
+    const pageIndex = this.pdfViewer.currentPageNumber - 1;
+    const left =
+      this.pageOrigin(pageIndex).left + this.stops(pageIndex)[0].left;
+    this.#log(`scrolling to ${left}, ${target}`);
+    this.container.scrollTo({ top: target, left, behavior: 'instant' });
+    this.#last = null;
   }
 
   /** Go to the first stop of a page. */

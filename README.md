@@ -11,7 +11,8 @@ Click the toolbar button next to **Appearance** to open the settings popup:
 - **Paging**:
   - **Page** zooms each column so all of it is visible, and centers it.
   - **Continuous** zooms each column to fit its width, then scrolls down it one
-    screen at a time.
+    screen at a time. With a single column it scrolls straight across page
+    boundaries instead of stopping at the bottom of each page.
   - **Off** restores Zotero's normal navigation.
 - **Columns** (1–4): the content area is divided into this many equal columns,
   which are read left to right before moving on to the next page. This also
