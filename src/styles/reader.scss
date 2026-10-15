@@ -13,8 +13,60 @@
     gap: 6px;
   }
 
-  .option input[type='number'] {
-    width: 60px;
+  .number-input {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+
+    input[type='number'] {
+      appearance: textfield;
+      width: 64px;
+      height: 22px;
+      padding: 0 18px 0 6px;
+      border: var(--material-border-quarternary);
+      border-radius: 5px;
+      background: var(--material-background);
+      color: var(--fill-primary);
+      text-align: right;
+
+      &::-webkit-inner-spin-button,
+      &::-webkit-outer-spin-button {
+        appearance: none;
+        margin: 0;
+      }
+
+      &:focus {
+        outline: none;
+        border-color: transparent;
+        box-shadow: 0 0 0 var(--width-focus-border) var(--color-focus-search);
+      }
+    }
+
+    .spin {
+      position: absolute;
+      inset-inline-end: 3px;
+      top: 2px;
+      bottom: 2px;
+      display: flex;
+      flex-direction: column;
+
+      button {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 12px;
+        padding: 0;
+        border: none;
+        background: none;
+        box-shadow: none;
+        color: var(--fill-secondary);
+
+        &:hover {
+          color: var(--fill-primary);
+        }
+      }
+    }
   }
 
   .area-label {

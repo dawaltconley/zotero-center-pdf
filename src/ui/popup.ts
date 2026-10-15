@@ -87,7 +87,27 @@ export class Popup {
         const value = Number(input.value);
         if (Number.isFinite(value)) onSet(Math.min(max, Math.max(min, value)));
       });
-      return input;
+      // Firefox doesn't allow styling the native spin buttons, so they're
+      // hidden in reader.scss and replaced with these
+      const spinButton = (dir: 1 | -1) => {
+        const button = h(doc, 'button', {
+          tabIndex: -1,
+          className: dir === 1 ? 'up' : 'down',
+          title: dir === 1 ? 'Increase' : 'Decrease',
+          onclick: () => {
+            if (dir === 1) input.stepUp();
+            else input.stepDown();
+            input.dispatchEvent(new doc.defaultView!.Event('change'));
+          },
+        });
+        button.append(chevron(doc, dir));
+        return button;
+      };
+      const el = h(doc, 'span', { className: 'number-input' }, [
+        input,
+        h(doc, 'span', { className: 'spin' }, [spinButton(1), spinButton(-1)]),
+      ]);
+      return { input, el };
     };
 
     const mode = toggle(MODES, (mode) => callbacks.onChange({ mode }));
@@ -118,7 +138,7 @@ export class Popup {
     );
     const overlapOption = option(
       'Overlap',
-      h(doc, 'div', { className: 'value' }, [overlap, '%']),
+      h(doc, 'div', { className: 'value' }, [overlap.el, '%']),
     );
 
     const popup = h(
@@ -141,7 +161,7 @@ export class Popup {
           ),
           option(
             'Margin',
-            h(doc, 'div', { className: 'value' }, [margin, 'px']),
+            h(doc, 'div', { className: 'value' }, [margin.el, 'px']),
           ),
           overlapOption,
         ]),
@@ -177,8 +197,10 @@ export class Popup {
       columns.update(s.columns);
       areaLabel.textContent = s.area ? 'Custom' : 'Whole page';
       resetButton.disabled = !s.area;
-      if (doc.activeElement !== margin) margin.value = String(s.marginPx);
-      if (doc.activeElement !== overlap) overlap.value = String(s.overlapPct);
+      if (doc.activeElement !== margin.input)
+        margin.input.value = String(s.marginPx);
+      if (doc.activeElement !== overlap.input)
+        overlap.input.value = String(s.overlapPct);
       overlapOption.hidden = s.mode !== 'continuous';
     };
     this.#render(settings);
@@ -192,6 +214,22 @@ export class Popup {
   remove() {
     this.overlay.remove();
   }
+}
+
+/** A small up or down chevron for the number input spin buttons. */
+function chevron(doc: Document, dir: 1 | -1): Element {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = doc.createElementNS(svgNS, 'svg');
+  svg.setAttribute('width', '8');
+  svg.setAttribute('height', '5');
+  svg.setAttribute('viewBox', '0 0 8 5');
+  const path = doc.createElementNS(svgNS, 'path');
+  path.setAttribute('d', dir === 1 ? 'M1 4l3-3 3 3' : 'M1 1l3 3 3-3');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'currentColor');
+  path.setAttribute('stroke-width', '1.25');
+  svg.append(path);
+  return svg;
 }
 
 /** Toolbar button: a page with a dashed crop rectangle. */
