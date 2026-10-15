@@ -6,7 +6,7 @@ scrolling is annoying. Inspired by KOReader's zoom and paging modes.
 
 ## Usage
 
-Click the toolbar button next to **Appearance** to open the settings popup:
+Click the toolbar button next to the zoom buttons to open the settings popup:
 
 - **Paging**:
   - **Page** zooms each column so all of it is visible, and centers it.

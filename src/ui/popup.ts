@@ -211,6 +211,17 @@ export class Popup {
     this.#render(settings);
   }
 
+  /** Align the popup's start edge with an element (e.g. its toolbar button). */
+  anchorTo(el: Element) {
+    const popup = this.overlay.querySelector<HTMLElement>(`.${POPUP_CLASS}`);
+    if (!popup) return;
+    const overlayRect = this.overlay.getBoundingClientRect();
+    const rect = el.getBoundingClientRect();
+    const maxLeft = overlayRect.width - popup.offsetWidth - 10;
+    const left = Math.max(10, Math.min(rect.left - overlayRect.left, maxLeft));
+    popup.style.left = `${left}px`;
+  }
+
   remove() {
     this.overlay.remove();
   }

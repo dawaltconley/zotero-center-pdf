@@ -162,13 +162,16 @@ export class ReaderController {
   #injectButton() {
     const doc = this.#doc;
     if (!doc || doc.getElementById(BUTTON_ID)) return;
-    const end = doc.querySelector('.toolbar .end');
-    if (!end) return;
+    const start = doc.querySelector('.toolbar .start');
+    if (!start) return;
     const button = createToolbarButton(doc);
     button.addEventListener('click', () => this.togglePopup());
-    const appearance = end.querySelector('#appearance');
-    if (appearance) end.insertBefore(button, appearance);
-    else end.append(button);
+    // after the zoom buttons
+    const zoomAuto = start.querySelector(':scope > #zoomAuto');
+    const divider = start.querySelector(':scope > .divider');
+    if (zoomAuto) zoomAuto.after(button);
+    else if (divider) divider.before(button);
+    else start.append(button);
   }
 
   togglePopup() {
@@ -186,7 +189,11 @@ export class ReaderController {
       onSaveDefaults: () => this.saveDefaults(),
       onClose: () => this.#closePopup(),
     });
-    doc.getElementById(BUTTON_ID)?.classList.add('active');
+    const button = doc.getElementById(BUTTON_ID);
+    if (button) {
+      this.#popup.anchorTo(button);
+      button.classList.add('active');
+    }
     this.#refreshPreview();
   }
 

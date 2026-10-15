@@ -1,6 +1,9 @@
 // Styles for the reader UI document (toolbar, popups).
 
 .center-pdf-popup {
+  // anchored to the toolbar button in code instead of the right edge
+  inset-inline-end: auto;
+
   .split-toggle button {
     font-size: 12px;
     color: var(--fill-primary);
