@@ -1,10 +1,10 @@
 // Styles for the pdf.js iframe document (drawing canvas, area preview).
 @use 'variables' as *;
 
-.center-pdf-draw {
+.pdf-content-flow-draw {
   // read by the canvas drawing code
-  --center-pdf-accent: #{$accent};
-  --center-pdf-dim: #{$dim};
+  --pdf-content-flow-accent: #{$accent};
+  --pdf-content-flow-dim: #{$dim};
 
   position: fixed;
   inset: 0;
@@ -32,7 +32,7 @@
   }
 }
 
-.center-pdf-preview {
+.pdf-content-flow-preview {
   position: absolute;
   box-sizing: border-box;
   border: 2px dashed $accent;

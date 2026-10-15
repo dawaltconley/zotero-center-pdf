@@ -1,6 +1,6 @@
 // Styles for the reader UI document (toolbar, popups).
 
-.center-pdf-popup {
+.pdf-content-flow-popup {
   // anchored to the toolbar button in code instead of the right edge
   inset-inline-end: auto;
 
@@ -88,6 +88,6 @@
 }
 
 // Scroll and spread mode options conflict with paging
-.center-pdf-active .center-pdf-conflict {
+.pdf-content-flow-active .pdf-content-flow-conflict {
   display: none !important;
 }

@@ -21,7 +21,7 @@ export const DEFAULTS: Settings = {
 };
 
 const MODES: Mode[] = ['off', 'page', 'continuous'];
-const DOC_FILE = '.zotero-center-pdf.json';
+const DOC_FILE = '.zotero-pdf-content-flow.json';
 
 const prefKey = (name: string) => `${config.prefsPrefix}.${name}`;
 

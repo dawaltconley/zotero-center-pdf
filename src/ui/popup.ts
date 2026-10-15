@@ -1,8 +1,8 @@
 import type { Mode } from '../geometry';
 import type { Settings } from '../settings';
 
-export const POPUP_CLASS = 'center-pdf-popup';
-export const BUTTON_ID = 'center-pdf-button';
+export const POPUP_CLASS = 'pdf-content-flow-popup';
+export const BUTTON_ID = 'pdf-content-flow-button';
 
 export interface PopupCallbacks {
   onChange: (changes: Partial<Settings>) => void;

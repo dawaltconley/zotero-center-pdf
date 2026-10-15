@@ -10,9 +10,9 @@ import {
 import { drawArea, showAreaPreview } from './ui/draw-canvas';
 import { BUTTON_ID, POPUP_CLASS, Popup, createToolbarButton } from './ui/popup';
 
-const STYLE_ID = 'center-pdf-styles';
-const CONFLICT_CLASS = 'center-pdf-conflict';
-const ACTIVE_CLASS = 'center-pdf-active';
+const STYLE_ID = 'pdf-content-flow-styles';
+const CONFLICT_CLASS = 'pdf-content-flow-conflict';
+const ACTIVE_CLASS = 'pdf-content-flow-active';
 
 /** Owns everything the plugin adds to one reader tab. */
 export class ReaderController {

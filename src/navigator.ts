@@ -14,7 +14,7 @@ import {
 import type { Settings } from './settings';
 import pdfViewCss from './styles/pdf-view.scss';
 
-const STYLE_ID = 'center-pdf-styles';
+const STYLE_ID = 'pdf-content-flow-styles';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /** Zotero's internal PDFView (reader/src/pdf/pdf-view.js). */

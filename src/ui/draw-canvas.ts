@@ -41,7 +41,7 @@ export function drawArea(
   };
 
   const backdrop = doc.createElement('div');
-  backdrop.className = 'center-pdf-draw';
+  backdrop.className = 'pdf-content-flow-draw';
   backdrop.tabIndex = -1;
 
   const hint = doc.createElement('div');
@@ -67,8 +67,8 @@ export function drawArea(
 
   // colors are defined in pdf-view.scss
   const css = win.getComputedStyle(backdrop)!;
-  const accent = css.getPropertyValue('--center-pdf-accent').trim();
-  const dim = css.getPropertyValue('--center-pdf-dim').trim();
+  const accent = css.getPropertyValue('--pdf-content-flow-accent').trim();
+  const dim = css.getPropertyValue('--pdf-content-flow-dim').trim();
 
   let start: { x: number; y: number } | null = null;
   let rect: { x0: number; y0: number; x1: number; y1: number } | null = null;
@@ -219,7 +219,7 @@ export function showAreaPreview(nav: Navigator, columns: number): () => void {
   const pageH = pageDiv.clientHeight / scale;
   const pct = (v: number, total: number) => `${(100 * v) / total}%`;
   const outline = doc.createElement('div');
-  outline.className = 'center-pdf-preview';
+  outline.className = 'pdf-content-flow-preview';
   Object.assign(outline.style, {
     left: pct(area.left, pageW),
     top: pct(area.top, pageH),

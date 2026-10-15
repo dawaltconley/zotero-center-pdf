@@ -1,4 +1,4 @@
-# Zotero Plugin: Center PDF
+# Zotero Plugin: PDF Content Flow
 
 Makes PDF page navigation in Zotero's reader zoom to and step through the
 page's content. This is useful on e-ink readers and other devices where
@@ -31,7 +31,7 @@ PageUp/PageDown, Space/Shift+Space, and Home/End. While paging is on, the
 reader is kept in vertical scroll mode with no spreads, and those options are
 hidden from the Appearance popup.
 
-Per-document settings are stored locally in `.zotero-center-pdf.json` in the
+Per-document settings are stored locally in `.zotero-pdf-content-flow.json` in the
 attachment's storage folder. They are not synced.
 
 ## Development
