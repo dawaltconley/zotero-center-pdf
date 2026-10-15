@@ -1,53 +1,50 @@
 import { config } from '../package.json';
-import {
-  isPDFReader,
-  isIFrame,
-  waitForReader,
-  waitForInternalReader,
-} from './utils';
+import { ReaderController } from './reader-controller';
+import { isPDFReader, waitForReader, waitForInternalReader } from './utils';
 
 export interface PluginOptions {
   id: string;
   version: string;
   rootURI: string;
-  stylesId?: string;
 }
 
 export class Plugin {
   readonly id: string;
-  readonly stylesId: string;
   readonly version: string;
   readonly rootURI: string;
 
-  #isActive: boolean = true;
-  get isActive(): boolean {
-    return this.#isActive;
-  }
+  #controllers = new Map<string, ReaderController>();
 
-  constructor({
-    id = 'center-pdf@dylan.ac',
-    stylesId = 'pluginStyles',
-    version,
-    rootURI,
-  }: PluginOptions) {
+  constructor({ id = config.addonID, version, rootURI }: PluginOptions) {
     this.id = id;
-    this.stylesId = stylesId;
     this.version = version;
     this.rootURI = rootURI;
   }
 
   startup(): void {
-    this.log('registering renderToolbar listener');
     this.registerObserver();
+    Zotero.Reader.registerEventListener(
+      'createViewContextMenu',
+      this.onViewContextMenu,
+      this.id,
+    );
+    // readers that were already open when the plugin started
+    for (const reader of Zotero.Reader._readers) {
+      if (isPDFReader(reader)) this.attach(reader);
+    }
   }
 
   shutdown(): void {
-    this.log('unregistering renderToolbar listener');
     this.unregisterObserver();
+    Zotero.Reader.unregisterEventListener(
+      'createViewContextMenu',
+      this.onViewContextMenu,
+    );
+    this.#controllers.forEach((c) => c.destroy());
+    this.#controllers.clear();
   }
 
   observerID?: string;
-  #updatedTabs = new Set<string | number>();
   registerObserver() {
     this.log('registering tab observer');
     if (this.observerID) {
@@ -58,20 +55,20 @@ export class Plugin {
     this.observerID = Zotero.Notifier.registerObserver(
       {
         notify: async (event, type, ids, extraData) => {
-          if (triggers.has(event) && type === 'tab') {
-            const tabIDs = ids.filter(
-              (id) =>
-                extraData[id].type === 'reader' && !this.#updatedTabs.has(id),
-            );
-            await Promise.all(
-              tabIDs.map(async (id) => {
-                const reader = Zotero.Reader.getByTabID(id.toString());
-                if (reader && isPDFReader(reader)) {
-                  await this.addListeners(reader);
-                }
-              }),
-            );
+          if (type !== 'tab') return;
+          if (event === 'close') {
+            ids.forEach((id) => this.detach(id.toString()));
+            return;
           }
+          if (!triggers.has(event)) return;
+          await Promise.all(
+            ids
+              .filter((id) => extraData[id]?.type === 'reader')
+              .map(async (id) => {
+                const reader = Zotero.Reader.getByTabID(id.toString());
+                if (reader && isPDFReader(reader)) await this.attach(reader);
+              }),
+          );
         },
       },
       ['tab'],
@@ -87,113 +84,47 @@ export class Plugin {
     }
   }
 
-  async addListeners(reader: _ZoteroTypes.ReaderInstance<'pdf'>) {
-    this.log('adding page listeners');
+  async attach(reader: _ZoteroTypes.ReaderInstance<'pdf'>) {
+    const tabID = reader.tabID;
+    const existing = this.#controllers.get(tabID);
+    if (existing?.reader === reader) return;
+    existing?.destroy();
+
+    const controller = new ReaderController(reader, (msg) => this.log(msg));
+    this.#controllers.set(tabID, controller);
     await waitForReader(reader);
     await waitForInternalReader(reader);
-    const doc = reader?._iframeWindow?.document;
-    const iframe = doc?.querySelector<HTMLIFrameElement>(
-      'iframe[src="pdf/web/viewer.html"]',
+    if (this.#controllers.get(tabID) !== controller) return;
+    this.log(`attaching to tab ${tabID}`);
+    await controller.init();
+  }
+
+  detach(tabID: string) {
+    this.#controllers.get(tabID)?.destroy();
+    this.#controllers.delete(tabID);
+  }
+
+  onViewContextMenu = ({
+    reader,
+    append,
+  }: _ZoteroTypes.Reader.EventParams<'createViewContextMenu'>) => {
+    const controller = this.#controllers.get(reader.tabID);
+    if (!controller) return;
+    append(
+      {
+        label: 'Draw Content Area…',
+        onCommand: () => controller.drawArea(),
+      },
+      // @ts-expect-error append takes any number of items (one menu group)
+      {
+        label: 'Reset Content Area',
+        disabled: !controller.settings.area,
+        onCommand: () => controller.update({ area: null }),
+      },
     );
-    if (!doc || !iframe || !isIFrame(iframe)) {
-      this.log(`couldn't attach styles; tab ${reader.tabID} not ready`);
-      return;
-    }
-
-    const viewer = await Plugin.getViewerContainer(iframe);
-    const lastView = reader._internalReader._lastView;
-    const pdfViewer = lastView._iframeWindow?.PDFViewerApplication.pdfViewer;
-    const eventBus = lastView._iframeWindow?.PDFViewerApplication.eventBus;
-    if (!viewer || !pdfViewer || !eventBus) {
-      return;
-    }
-
-    // Modifying functions defined at reader/src/pdf/pdf-view.js
-    lastView.navigateBack = () => {
-      // @ts-expect-error _history not included in types
-      lastView._history.navigateBack();
-      this.centerCurrentPage(viewer);
-    };
-    lastView.navigateToPreviousPage = () => {
-      pdfViewer.previousPage();
-      this.centerCurrentPage(viewer);
-    };
-    lastView.navigateToNextPage = () => {
-      pdfViewer.nextPage();
-      this.centerCurrentPage(viewer);
-    };
-    lastView.navigateToFirstPage = () => {
-      // @ts-expect-error not sure why it thinks dispatch needs two arguments
-      eventBus.dispatch('firstpage');
-      this.centerCurrentPage(viewer);
-    };
-    lastView.navigateToLastPage = () => {
-      // @ts-expect-error not sure why it thinks dispatch needs two arguments
-      eventBus.dispatch('lastpage');
-      this.centerCurrentPage(viewer);
-    };
-
-    this.log('added page listeners');
-  }
-
-  centerCurrentPage(viewer: HTMLElement) {
-    const page = Plugin.getCurrentPage(viewer);
-    if (!page) {
-      this.log("couldn't identify current page");
-      return;
-    }
-    const target = Plugin.getScrollTarget(viewer, page);
-    this.log(`scrolling to ${JSON.stringify(target)}`);
-    viewer.scrollTo(target);
-  }
-
-  static getViewerContainer(
-    iframe: HTMLIFrameElement,
-  ): Promise<HTMLElement | null> {
-    return new Promise((resolve) => {
-      const viewer =
-        iframe.contentDocument?.querySelector<HTMLElement>('#viewerContainer');
-      if (viewer) {
-        resolve(viewer);
-      } else {
-        iframe.addEventListener('load', () => {
-          const viewer =
-            iframe.contentDocument?.querySelector<HTMLElement>(
-              '#viewerContainer',
-            );
-          resolve(viewer || null);
-        });
-      }
-    });
-  }
+  };
 
   log(msg: string) {
     Zotero.debug(`[${config.addonName}] ${msg}`);
-  }
-
-  static getScrollTarget(viewer: HTMLElement, page: HTMLElement) {
-    const xOffset = (page.clientWidth - viewer.clientWidth) * 0.5;
-    const yOffset = (page.clientHeight - viewer.clientHeight) * 0.5;
-    return {
-      top: page.offsetTop + yOffset,
-      left: page.offsetLeft + xOffset,
-    };
-  }
-
-  // // unused, can uncomment if needed
-  // static getCurrentPageIndex(): number | null {
-  //   const viewState =
-  //     Zotero.Reader._readers[0]._internalReader._state.primaryViewState;
-  //   return 'pageIndex' in viewState ? viewState.pageIndex : null;
-  // }
-
-  static getCurrentPage(viewer: HTMLElement): HTMLElement | null {
-    const pages = viewer.querySelectorAll<HTMLElement>('.pdfViewer .page');
-    for (const p of pages) {
-      if (Math.abs(p.offsetTop - viewer.scrollTop) < 5) {
-        return p;
-      }
-    }
-    return null;
   }
 }

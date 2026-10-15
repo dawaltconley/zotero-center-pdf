@@ -1,7 +1,7 @@
 {
   "name": "zotero-center-pdf",
   "type": "module",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Zotero plugin to center a PDF in the view when navigating between pages.",
   "config": {
     "addonName": "Center PDF",
@@ -16,7 +16,7 @@
     "lint:check": "prettier --check . && eslint .",
     "lint:fix": "prettier --write . && eslint . --fix",
     "release": "zotero-plugin release",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run"
   },
   "author": "Dylan Awalt-Conley",
   "license": "ISC",
@@ -26,6 +26,7 @@
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^7.18.0",
+    "vitest": "^3.2.6",
     "zotero-plugin-scaffold": "^0.8.8",
     "zotero-types": "^4.1.3"
   },
